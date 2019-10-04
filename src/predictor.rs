@@ -1,10 +1,7 @@
-use self::super::functions::ObjFunction;
-use std::fs::File;
-
-struct Predictor {
-    obj_function: dyn ObjFunction,
-}
+struct Predictor {}
 
 impl Predictor {
-
+    fn new() -> Predictor {
+        Predictor{}
+    }
 }
