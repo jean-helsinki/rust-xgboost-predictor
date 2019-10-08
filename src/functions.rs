@@ -7,7 +7,7 @@ pub enum FunctionType {
     RegLinear,
 }
 
-pub struct ClassifyFunction {
+pub struct ObjFunction {
     vector: fn(Vec<f64>) -> Vec<f64>,
     scalar: fn(f64) -> f64,
 }
@@ -61,13 +61,13 @@ fn multiclass_pred_prob_vec(preds: Vec<f64>) -> Vec<f64> {
 }
 
 
-pub fn get_classify_function(tp: FunctionType) -> ClassifyFunction {
+pub fn get_classify_function(tp: FunctionType) -> ObjFunction {
     match tp {
         FunctionType::RankPairwise | FunctionType::BinaryLogitraw | FunctionType::RegLinear
-        => ClassifyFunction { vector: dump_vec, scalar: dump },
-        FunctionType::BinaryLogistic => ClassifyFunction { vector: logistic_vec, scalar: sigmoid },
-        FunctionType::MultiSoftmax => ClassifyFunction { vector: multiclass_vec, scalar: unimplemented },
-        FunctionType::MultiSoftprob => ClassifyFunction { vector: multiclass_pred_prob_vec, scalar: unimplemented },
+        => ObjFunction { vector: dump_vec, scalar: dump },
+        FunctionType::BinaryLogistic => ObjFunction { vector: logistic_vec, scalar: sigmoid },
+        FunctionType::MultiSoftmax => ObjFunction { vector: multiclass_vec, scalar: unimplemented },
+        FunctionType::MultiSoftprob => ObjFunction { vector: multiclass_pred_prob_vec, scalar: unimplemented },
     }
 }
 
