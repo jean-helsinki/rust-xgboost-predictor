@@ -2,6 +2,7 @@ use crate::model_reader::{ModelReader, ModelReadResult};
 use std::f32;
 
 
+#[derive(Clone, Copy)]
 struct Param {
     /// number of start root
     num_roots: i32,
@@ -16,24 +17,31 @@ struct Param {
     /// leaf vector size, used for vector tree used to store more than one dimensional information in tree
     size_leaf_vector: i32,
     /// reserved part
-    reserved: Vec<i32>,
+    reserved: [i32; 31],
 }
 
 impl Param {
     fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<Param> {
+        let (num_roots, num_nodes, num_deleted, max_depth, num_feature, size_leaf_vector) =
+            (reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?);
+
+        let mut reserved = [0i32; 31];
+        reader.read_to_i32_buffer(&mut reserved)?;
+
         return Ok(Param {
-            num_roots: reader.read_i32_le()?,
-            num_nodes: reader.read_i32_le()?,
-            num_deleted: reader.read_i32_le()?,
-            max_depth: reader.read_i32_le()?,
-            num_feature: reader.read_i32_le()?,
-            size_leaf_vector: reader.read_i32_le()?,
-            reserved: reader.read_int_vec(31)?,
+            num_roots,
+            num_nodes,
+            num_deleted,
+            max_depth,
+            num_feature,
+            size_leaf_vector,
+            reserved,
         })
     }
 }
 
 
+#[derive(Clone, Copy)]
 struct Node {
     /// pointer to parent, highest bit is used to indicate whether it's a left child or not
     parent: i32,
@@ -63,8 +71,8 @@ impl Node {
             (reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?);
         let is_leaf = cleft == -1;
 
-        let leaf_value = if is_leaf {reader.read_float_le()?} else { f32::NAN };
-        let split_cond = if is_leaf { f32::NAN } else {reader.read_float_le()?};
+        let leaf_value = if is_leaf {reader.read_f32_le()?} else { f32::NAN };
+        let split_cond = if is_leaf { f32::NAN } else {reader.read_f32_le()?};
 
         let split_index = Node::decode_split_index(sindex);
         let default_next = if Node::is_default_left(split_index) {cleft} else {cright};
@@ -84,6 +92,7 @@ impl Node {
 }
 
 
+#[derive(Clone, Copy)]
 struct RTreeNodeStat {
     /// loss chg caused by current split
     loss_chg: f32,
@@ -98,9 +107,9 @@ struct RTreeNodeStat {
 impl RTreeNodeStat {
     fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<RTreeNodeStat> {
         return Ok(RTreeNodeStat{
-            loss_chg: reader.read_float_le()?,
-            sum_hess: reader.read_float_le()?,
-            base_weight: reader.read_float_le()?,
+            loss_chg: reader.read_f32_le()?,
+            sum_hess: reader.read_f32_le()?,
+            base_weight: reader.read_f32_le()?,
             leaf_child_cnt: reader.read_i32_le()?,
         })
     }
@@ -114,10 +123,17 @@ pub struct RegTree {
 }
 
 impl RegTree {
-    fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<RegTree> {
+    pub fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<RegTree> {
         let param = Param::new(reader)?;
         let nodes: ModelReadResult<Vec<Node>> = (0..param.num_nodes).map(|_| Node::new(reader)).collect();
         let stats: ModelReadResult<Vec<RTreeNodeStat>> = (0..param.num_nodes).map(|_| RTreeNodeStat::new(reader)).collect();
         return Ok(RegTree{param, nodes: nodes?, stats: stats?});
+    }
+}
+
+
+impl Clone for RegTree {
+    fn clone(&self) -> RegTree {
+        return RegTree { param: self.param.clone(), nodes: self.nodes.clone(), stats: self.stats.clone() };
     }
 }

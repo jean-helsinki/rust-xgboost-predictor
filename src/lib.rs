@@ -1,7 +1,6 @@
 mod predictor;
 mod functions;
 mod model_reader;
-mod regtree;
 mod gbm;
 mod fvec;
 
