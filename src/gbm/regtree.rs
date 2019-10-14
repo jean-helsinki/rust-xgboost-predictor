@@ -1,4 +1,5 @@
 use crate::model_reader::{ModelReader, ModelReadResult};
+use crate::fvec::FVec;
 use std::f32;
 
 
@@ -40,21 +41,26 @@ impl Param {
     }
 }
 
+#[derive(Clone, Copy)]
+enum LeafOrSplit {
+    LeafValue(f32),
+    Split {
+        /// pointer to right
+        cleft: i32,
+        /// pointer to right
+        cright: i32,
+        /// split feature index, left split or right split depends on the highest bit
+        split_cond: f32,
+        default_next: i32,
+        split_index: i32,
+    },
+}
 
 #[derive(Clone, Copy)]
 struct Node {
     /// pointer to parent, highest bit is used to indicate whether it's a left child or not
     parent: i32,
-    /// pointer to right
-    cleft: i32,
-    /// pointer to right
-    cright: i32,
-    /// split feature index, left split or right split depends on the highest bit
-    leaf_value: f32,
-    split_cond: f32,
-    default_next: i32,
-    split_index: i32,
-    is_leaf: bool,
+    leaf_or_split: LeafOrSplit,
 }
 
 impl Node {
@@ -69,28 +75,45 @@ impl Node {
     fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<Node> {
         let (parent, cleft, cright, sindex) =
             (reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?);
-        let is_leaf = cleft == -1;
-
-        let leaf_value = if is_leaf {reader.read_f32_le()?} else { f32::NAN };
-        let split_cond = if is_leaf { f32::NAN } else {reader.read_f32_le()?};
 
         let split_index = Node::decode_split_index(sindex);
         let default_next = if Node::is_default_left(split_index) {cleft} else {cright};
 
-        return Ok(Node {
-            parent: parent,
-            cleft: cleft,
-            cright: cright,
-            leaf_value: leaf_value,
-            split_cond: split_cond,
-            default_next: default_next,
-            split_index: split_index,
-            is_leaf: is_leaf,
-        })
+        let is_leaf = cleft == -1;
 
+        let leaf_or_split = if is_leaf {
+            LeafOrSplit::LeafValue(reader.read_f32_le()?)
+        } else {
+            LeafOrSplit::Split{
+                cleft,
+                cright,
+                split_cond: reader.read_f32_le()?,
+                default_next,
+                split_index
+            }
+        };
+
+        return Ok(Node {
+            parent,
+            leaf_or_split,
+        })
+    }
+
+    fn next<F: FVec>(&self, feat: &F) -> Option<usize> {
+        return match self.leaf_or_split {
+            LeafOrSplit::LeafValue(_) => { None },
+            LeafOrSplit::Split { cleft, cright, split_cond, default_next, split_index } => {
+                match feat.fvalue(split_index as usize) {
+                    None => { return Some(default_next as usize) },
+                    Some(fvalue) => {
+                        if fvalue < (split_cond as f64)
+                        { Some(cleft as usize) } else { Some(cright as usize) }
+                    }
+                }
+            }
+        }
     }
 }
-
 
 #[derive(Clone, Copy)]
 struct RTreeNodeStat {
@@ -128,6 +151,28 @@ impl RegTree {
         let nodes: ModelReadResult<Vec<Node>> = (0..param.num_nodes).map(|_| Node::new(reader)).collect();
         let stats: ModelReadResult<Vec<RTreeNodeStat>> = (0..param.num_nodes).map(|_| RTreeNodeStat::new(reader)).collect();
         return Ok(RegTree{param, nodes: nodes?, stats: stats?});
+    }
+
+    pub fn get_leaf_index<F: FVec>(&self, feat: &F, root_id: usize) -> usize {
+        let mut pid = root_id;
+        let mut node = self.nodes[pid];
+        loop {
+            match node.next(feat) {
+                None => {return pid},
+                Some(new_pid) => {
+                    pid = new_pid;
+                    node = self.nodes[pid];
+                },
+            } ;
+        };
+    }
+
+    pub fn get_leaf_value<F: FVec>(&self, feat: &F, root_id: usize) -> f64 {
+        let leaf_node= self.nodes[self.get_leaf_index(feat, root_id)];
+        return match leaf_node.leaf_or_split {
+            LeafOrSplit::LeafValue(leaf_value) => {leaf_value as f64},
+            LeafOrSplit::Split { .. } => {panic!("Broken tree - is not leaf node")},
+        }
     }
 }
 

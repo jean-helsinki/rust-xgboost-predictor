@@ -89,18 +89,34 @@ impl GBTree {
             group_trees,
         })
     }
+
+    fn pred<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f64 {
+        let trees = self.group_trees[bst_group].clone();
+        assert!(ntree_limit <= trees.len());
+        let treeleft = if ntree_limit == 0 { trees.len() } else { ntree_limit };
+        return (0..treeleft).map(|i| trees[i].get_leaf_value(feat, root_index)).sum();
+    }
+
+    fn pred_path<F: FVec>(&self, feat: &F, root_index: usize, ntree_limit: usize) -> Vec<usize> {
+        let treeleft = if ntree_limit == 0 {self.trees.len()} else {ntree_limit};
+        return (0..treeleft).map(|i| self.trees[i].get_leaf_index(feat, root_index)).collect();
+    }
 }
 
 impl<F: FVec> GradBooster<F> for GBTree {
-    fn predict(feat: &F, ntree_limit: i32) -> Vec<f64> {
-        unimplemented!()
+    fn predict(&self, feat: &F, ntree_limit: usize) -> Vec<f64> {
+        return (0..self.mparam.num_output_group)
+            .map(|gid| self.pred(feat, gid as usize, 0, ntree_limit)).collect();
     }
 
-    fn predict_single(feat: &F, ntree_limit: i32) -> f64 {
-        unimplemented!()
+    fn predict_single(&self, feat: &F, ntree_limit: usize) -> f64 {
+        if self.mparam.num_output_group != 1 {
+            panic!("Can't invoke predict_single() because this model outputs multiple values");
+        }
+        return self.pred(feat, 0, 0, ntree_limit);
     }
 
-    fn predict_leaf(feat: &F, ntree_limit: i32) -> Vec<i32> {
-        unimplemented!()
+    fn predict_leaf(&self, feat: &F, ntree_limit: usize) -> Vec<usize> {
+        return self.pred_path(feat, 0, ntree_limit);
     }
 }
