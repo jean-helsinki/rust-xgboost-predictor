@@ -8,16 +8,16 @@ pub enum FunctionType {
 }
 
 pub struct ObjFunction {
-    vector: fn(Vec<f64>) -> Vec<f64>,
-    scalar: fn(f64) -> f64,
+    pub vector: fn(&Vec<f64>) -> Vec<f64>,
+    pub scalar: fn(f64) -> f64,
 }
 
 fn sigmoid(x: f64) -> f64 {
     1f64 / (1f64 + (-x).exp())
 }
 
-fn dump_vec(preds: Vec<f64>) -> Vec<f64> {
-    return preds;
+fn dump_vec(preds: &Vec<f64>) -> Vec<f64> {
+    return preds.clone();
 }
 
 fn dump(pred: f64) -> f64 {
@@ -25,12 +25,12 @@ fn dump(pred: f64) -> f64 {
 }
 
 /// Logistic regression.
-fn logistic_vec(preds: Vec<f64>) -> Vec<f64> {
-    return preds.into_iter().map(sigmoid).collect();
+fn logistic_vec(preds: &Vec<f64>) -> Vec<f64> {
+    return preds.into_iter().map(|x| sigmoid(*x)).collect();
 }
 
 /// Multiclass classification.
-fn multiclass_vec(preds: Vec<f64>) -> Vec<f64> {
+fn multiclass_vec(preds: &Vec<f64>) -> Vec<f64> {
     match preds.get(0) {
         Option::Some(init) => {
             let (max_index, _max) = preds.iter().enumerate()
@@ -39,7 +39,7 @@ fn multiclass_vec(preds: Vec<f64>) -> Vec<f64> {
             return vec![max_index as f64; 1];
         }
         // empty vector
-        Option::None => preds
+        Option::None => preds.clone()
     }
 }
 
@@ -48,7 +48,7 @@ fn unimplemented(_pred: f64) -> f64 {
 }
 
 ///  Multiclass classification (predicted probability).
-fn multiclass_pred_prob_vec(preds: Vec<f64>) -> Vec<f64> {
+fn multiclass_pred_prob_vec(preds: &Vec<f64>) -> Vec<f64> {
     match preds.get(0) {
         Option::Some(init) => {
             let max = preds.iter().fold(*init, |a, b| b.max(a));
@@ -56,7 +56,7 @@ fn multiclass_pred_prob_vec(preds: Vec<f64>) -> Vec<f64> {
             return preds.iter().map(|x| (x - max).exp() / sum).collect();
         }
         // empty vector
-        Option::None => preds
+        Option::None => preds.clone()
     }
 }
 
@@ -71,6 +71,17 @@ pub fn get_classify_function(tp: FunctionType) -> ObjFunction {
     }
 }
 
+pub fn get_classify_func_type(obj_name: &[u8]) -> Option<FunctionType> {
+    return match obj_name {
+        b"rank:pairwise" => Some(FunctionType::RankPairwise),
+        b"binary:logistic" => Some(FunctionType::BinaryLogistic),
+        b"multi:softmax" => Some(FunctionType::MultiSoftmax),
+        b"multi:softprob" => Some(FunctionType::MultiSoftprob),
+        b"reg:linear" => Some(FunctionType::RegLinear),
+        _ => None,
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use crate::functions::get_classify_function;
@@ -79,6 +90,6 @@ mod tests {
     #[test]
     fn it_works() {
         let func = get_classify_function(BinaryLogistic);
-        (func.vector)(vec![1.0f64, 4.6f64]);
+        (func.vector)(&vec![1.0f64, 4.6f64]);
     }
 }

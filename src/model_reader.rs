@@ -12,6 +12,11 @@ pub trait ModelReader: ReadBytesExt {
     }
 
     #[inline]
+    fn read_i64_le(&mut self) -> ModelReadResult<i64> {
+        return self.read_i64::<LE>();
+    }
+
+    #[inline]
     fn read_f32_le(&mut self) -> ModelReadResult<f32> {
         return self.read_f32::<LE>();
     }
@@ -55,9 +60,24 @@ pub trait ModelReader: ReadBytesExt {
         return (0..num_values).map(|_| self.read_i32_le()).collect();
     }
 
+    fn read_float_vec(&mut self, num_values: usize) -> ModelReadResult<Vec<f32>> {
+        return (0..num_values).map(|_| self.read_f32_le()).collect();
+    }
+
     fn skip(&mut self, num_bytes: usize) -> ModelReadResult<()> {
         let mut vec: Vec<u8> = Vec::with_capacity(num_bytes);
         return self.read_exact(vec.as_mut_slice());
+    }
+
+    fn read_u8_vec(&mut self, size: usize) -> ModelReadResult<Vec<u8>> {
+        let mut vec: Vec<u8> = Vec::with_capacity(size);
+        self.read_exact(vec.as_mut_slice())?;
+        return Ok(vec);
+    }
+
+    fn read_u8_vec_len(&mut self) -> ModelReadResult<Vec<u8>> {
+        let len = self.read_i64_le()? as usize;
+        return self.read_u8_vec(len);
     }
 }
 
@@ -65,6 +85,7 @@ pub trait ModelReader: ReadBytesExt {
 mod tests {
     #[test]
     fn it_works() {
-
+        let bytes = [0x0u8, 0x1, 0x2, 0x3];
+        assert_eq!(&bytes[..3], [0x0u8, 0x1, 0x2])
     }
 }
