@@ -1,6 +1,7 @@
-use crate::model_reader::{ModelReadResult, ModelReader};
+use crate::model_reader::ModelReader;
 use crate::gbm::grad_booster::GradBooster;
 use crate::fvec::FVec;
+use crate::errors::*;
 
 struct ModelParam {
     /// number of features
@@ -14,7 +15,7 @@ struct ModelParam {
 }
 
 impl ModelParam {
-    fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<ModelParam> {
+    fn new<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
         let (num_feature, num_output_group) =
             (reader.read_i32_le()? as usize, reader.read_i32_le()? as usize);
         let mut reserved = [0i32;32];
@@ -35,7 +36,7 @@ pub struct GBLinear {
 }
 
 impl GBLinear {
-    pub fn new<T: ModelReader>(with_pbuffer: bool, reader: &mut T) -> ModelReadResult<Self> {
+    pub fn new<T: ModelReader>(with_pbuffer: bool, reader: &mut T) -> Result<Self> {
         let mparam = ModelParam::new(reader)?;
         // read padding
         reader.read_i32_le()?;

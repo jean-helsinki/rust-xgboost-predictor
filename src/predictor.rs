@@ -1,7 +1,8 @@
-use crate::model_reader::{ModelReader, ModelReadResult};
+use crate::model_reader::ModelReader;
 use crate::functions::ObjFunction;
 use crate::gbm::grad_booster::GradBooster;
 use crate::fvec::FVec;
+use crate::errors::*;
 use byteorder::{LE, ByteOrder};
 
 
@@ -19,7 +20,7 @@ struct ModelParam {
 }
 
 impl ModelParam {
-    fn new<T: ModelReader>(base_score: f32, num_feature: usize, reader: &mut T) -> ModelReadResult<ModelParam> {
+    fn new<T: ModelReader>(base_score: f32, num_feature: usize, reader: &mut T) -> Result<ModelParam> {
         let (num_class, saved_with_pbuffer) = (reader.read_i32_le()?, reader.read_i32_le()?);
         let mut reserved = [0i32; 30];
         reader.read_to_i32_buffer(&mut reserved)?;
@@ -42,7 +43,7 @@ pub struct Predictor<F: FVec> {
 }
 
 impl<F: FVec> Predictor<F> {
-    fn read_model_params<T: ModelReader>(reader: &mut T) -> ModelReadResult<ModelParam> {
+    fn read_model_params<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
         let mut first4bytes = [0u8; 4];
         let mut next4bytes = [0u8; 4];
         reader.read_exact(&mut first4bytes)?;
@@ -61,7 +62,7 @@ impl<F: FVec> Predictor<F> {
     }
 /*
     /// Instantiates with the Xgboost model
-    pub fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<Predictor<F>> {
+    pub fn new<T: ModelReader>(reader: &mut T) -> Result<Predictor<F>> {
         let mparam = Predictor::read_model_params(reader)?;
 
         let name_obj = reader.read_u8_vec_len()?;
@@ -105,7 +106,7 @@ impl<F: FVec> Predictor<F> {
     pub fn predict_single(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> f64 {
         let pred = self.predict_single_raw(feat, ntree_limit);
         return if output_margin {
-            (self.obj_func.scalar)(&preds)
+            (self.obj_func.scalar)(pred)
         } else {
             pred
         }

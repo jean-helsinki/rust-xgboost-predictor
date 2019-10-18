@@ -1,7 +1,8 @@
 use crate::fvec::FVec;
-use crate::model_reader::{ModelReadResult, ModelReader};
+use crate::model_reader::{ModelReader};
 use crate::gbm::gbtree::GBTree;
 use crate::gbm::gblinear::GBLinear;
+use crate::errors::*;
 
 /// Interface of gradient boosting model
 pub trait GradBooster<F: FVec> {
@@ -14,7 +15,7 @@ pub trait GradBooster<F: FVec> {
 }
 
 
-pub fn load_grad_booster<F: FVec, T: ModelReader>(reader: &mut T, name_gbm: &[u8], with_pbuffer: bool) -> ModelReadResult<Box<GradBooster<F>>>{
+pub fn load_grad_booster<F: FVec, T: ModelReader>(reader: &mut T, name_gbm: &[u8], with_pbuffer: bool) -> Result<Box<GradBooster<F>>>{
     match name_gbm {
         b"gbtree" => Ok(Box::new(GBTree::new(with_pbuffer, reader, false)?)),
         b"gblinear" => Ok(Box::new(GBLinear::new(with_pbuffer, reader)?)),

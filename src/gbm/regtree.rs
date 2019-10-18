@@ -1,5 +1,6 @@
-use crate::model_reader::{ModelReader, ModelReadResult};
+use crate::model_reader::ModelReader;
 use crate::fvec::FVec;
+use crate::errors::*;
 use std::f32;
 
 
@@ -22,7 +23,7 @@ struct Param {
 }
 
 impl Param {
-    fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<Param> {
+    fn new<T: ModelReader>(reader: &mut T) -> Result<Param> {
         let (num_roots, num_nodes, num_deleted, max_depth, num_feature, size_leaf_vector) =
             (reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?);
 
@@ -72,7 +73,7 @@ impl Node {
         return ((sindex as i64) & ((1i64 << 31) - 1i64)) as i32;
     }
 
-    fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<Node> {
+    fn new<T: ModelReader>(reader: &mut T) -> Result<Node> {
         let (parent, cleft, cright, sindex) =
             (reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?);
 
@@ -128,7 +129,7 @@ struct RTreeNodeStat {
 }
 
 impl RTreeNodeStat {
-    fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<RTreeNodeStat> {
+    fn new<T: ModelReader>(reader: &mut T) -> Result<RTreeNodeStat> {
         return Ok(RTreeNodeStat{
             loss_chg: reader.read_f32_le()?,
             sum_hess: reader.read_f32_le()?,
@@ -146,10 +147,10 @@ pub struct RegTree {
 }
 
 impl RegTree {
-    pub fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<RegTree> {
+    pub fn new<T: ModelReader>(reader: &mut T) -> Result<RegTree> {
         let param = Param::new(reader)?;
-        let nodes: ModelReadResult<Vec<Node>> = (0..param.num_nodes).map(|_| Node::new(reader)).collect();
-        let stats: ModelReadResult<Vec<RTreeNodeStat>> = (0..param.num_nodes).map(|_| RTreeNodeStat::new(reader)).collect();
+        let nodes: Result<Vec<Node>> = (0..param.num_nodes).map(|_| Node::new(reader)).collect();
+        let stats: Result<Vec<RTreeNodeStat>> = (0..param.num_nodes).map(|_| RTreeNodeStat::new(reader)).collect();
         return Ok(RegTree{param, nodes: nodes?, stats: stats?});
     }
 

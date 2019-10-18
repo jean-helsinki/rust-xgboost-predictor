@@ -1,7 +1,8 @@
 use crate::gbm::regtree::RegTree;
 use crate::gbm::grad_booster::GradBooster;
-use crate::model_reader::{ModelReader, ModelReadResult};
+use crate::model_reader::ModelReader;
 use crate::fvec::FVec;
+use crate::errors::*;
 
 
 struct ModelParam {
@@ -24,7 +25,7 @@ struct ModelParam {
 }
 
 impl ModelParam {
-    fn new<T: ModelReader>(reader: &mut T) -> ModelReadResult<ModelParam> {
+    fn new<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
         let (num_trees, num_roots, num_feature) =
             (reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?);
         // read padding
@@ -72,9 +73,9 @@ impl GBTree {
         ).collect()
     }
 
-    pub fn new<T: ModelReader>(with_pbuffer: bool, reader: &mut T, is_dart: bool) -> ModelReadResult<Self> {
+    pub fn new<T: ModelReader>(with_pbuffer: bool, reader: &mut T, is_dart: bool) -> Result<Self> {
         let mparam = ModelParam::new(reader)?;
-        let trees_result: ModelReadResult<Vec<RegTree>> = (0..mparam.num_trees).map(|_| RegTree::new(reader)).collect();
+        let trees_result: Result<Vec<RegTree>> = (0..mparam.num_trees).map(|_| RegTree::new(reader)).collect();
         let trees= trees_result?;
 
         let tree_info = reader.read_int_vec(mparam.num_trees as usize)?;
