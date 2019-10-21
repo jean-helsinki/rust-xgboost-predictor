@@ -1,3 +1,5 @@
+use crate::errors::*;
+
 pub enum FunctionType {
     RankPairwise,
     BinaryLogistic,
@@ -71,14 +73,14 @@ pub fn get_classify_function(tp: FunctionType) -> ObjFunction {
     }
 }
 
-pub fn get_classify_func_type(obj_name: &[u8]) -> Option<FunctionType> {
-    return match obj_name {
-        b"rank:pairwise" => Some(FunctionType::RankPairwise),
-        b"binary:logistic" => Some(FunctionType::BinaryLogistic),
-        b"multi:softmax" => Some(FunctionType::MultiSoftmax),
-        b"multi:softprob" => Some(FunctionType::MultiSoftprob),
-        b"reg:linear" => Some(FunctionType::RegLinear),
-        _ => None,
+pub fn get_classify_func_type(obj_name: Vec<u8>) -> Result<FunctionType> {
+    return match obj_name.as_slice() {
+        b"rank:pairwise" => Ok(FunctionType::RankPairwise),
+        b"binary:logistic" => Ok(FunctionType::BinaryLogistic),
+        b"multi:softmax" => Ok(FunctionType::MultiSoftmax),
+        b"multi:softprob" => Ok(FunctionType::MultiSoftprob),
+        b"reg:linear" => Ok(FunctionType::RegLinear),
+        _ => Err(Error::from_kind(ErrorKind::UnsupportedObjFunctionType(String::from_utf8(obj_name)?))),
     };
 }
 

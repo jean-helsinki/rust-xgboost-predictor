@@ -1,5 +1,5 @@
 use crate::fvec::FVec;
-use crate::model_reader::{ModelReader};
+use crate::model_reader::ModelReader;
 use crate::gbm::gbtree::GBTree;
 use crate::gbm::gblinear::GBLinear;
 use crate::errors::*;
@@ -15,11 +15,12 @@ pub trait GradBooster<F: FVec> {
 }
 
 
-pub fn load_grad_booster<F: FVec, T: ModelReader>(reader: &mut T, name_gbm: &[u8], with_pbuffer: bool) -> Result<Box<GradBooster<F>>>{
-    match name_gbm {
+pub fn load_grad_booster<F: FVec, T: ModelReader>(reader: &mut T, name_gbm: Vec<u8>, with_pbuffer: bool)
+    -> Result<Box<GradBooster<F>>>{
+    match name_gbm.as_slice() {
         b"gbtree" => Ok(Box::new(GBTree::new(with_pbuffer, reader, false)?)),
         b"gblinear" => Ok(Box::new(GBLinear::new(with_pbuffer, reader)?)),
         b"dart" => Ok(Box::new(GBTree::new(with_pbuffer, reader, true)?)),
-        _ => std::io::Error::new(),
+        _ => Err(Error::from_kind(ErrorKind::UnsupportedModelType(String::from_utf8(name_gbm)?))),
     }
 }

@@ -1,5 +1,5 @@
 use crate::model_reader::ModelReader;
-use crate::functions::ObjFunction;
+use crate::functions::{ObjFunction, FunctionType, get_classify_func_type, get_classify_function};
 use crate::gbm::grad_booster::GradBooster;
 use crate::fvec::FVec;
 use crate::errors::*;
@@ -60,17 +60,18 @@ impl<F: FVec> Predictor<F> {
 
         return ModelParam::new(base_score, num_feature, reader);
     }
-/*
+
     /// Instantiates with the Xgboost model
     pub fn new<T: ModelReader>(reader: &mut T) -> Result<Predictor<F>> {
-        let mparam = Predictor::read_model_params(reader)?;
+        let mparam = Predictor::<F>::read_model_params(reader)?;
 
         let name_obj = reader.read_u8_vec_len()?;
         let name_gbm = reader.read_u8_vec_len()?;
 
-        let obj_func = crate::functions::get_classify_func_type(name_obj.as_slice());
+        let obj_func_type = get_classify_func_type(name_obj)?;
+        let obj_func = get_classify_function(obj_func_type);
         let gbm =
-            crate::gbm::grad_booster::load_grad_booster( reader, name_gbm.as_slice(), mparam.saved_with_pbuffer != 0);
+            crate::gbm::grad_booster::load_grad_booster( reader, name_gbm, mparam.saved_with_pbuffer != 0)?;
 
         return Ok(Predictor{
             mparam,
@@ -78,7 +79,7 @@ impl<F: FVec> Predictor<F> {
             gbm,
         });
     }
-*/
+
     fn predict_raw(&self, feat: &F, ntree_limit: usize) -> Vec<f64> {
         let mut preds = self.gbm.predict(feat, ntree_limit);
         for i in 0..preds.len() {

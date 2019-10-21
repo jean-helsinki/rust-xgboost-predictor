@@ -102,7 +102,7 @@ impl GBTree {
     }
 
     fn pred<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f64 {
-        match self.weight_drop {
+        match &self.weight_drop {
             None => {self.pred_as_gbtree(feat, bst_group, root_index, ntree_limit)},
             Some(weight_drop) => {self.pred_as_dart(feat, &weight_drop, bst_group, root_index, ntree_limit)},
         }
