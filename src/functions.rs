@@ -9,6 +9,8 @@ pub enum FunctionType {
     RegLinear,
 }
 
+
+/// interface of objective function
 pub struct ObjFunction {
     pub vector: fn(&Vec<f64>) -> Vec<f64>,
     pub scalar: fn(f64) -> f64,

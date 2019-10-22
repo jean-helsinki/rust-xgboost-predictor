@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 byteorder = "1.2.2"
 error-chain = "0.12.1"
+
+[features]
+use_f64 = []

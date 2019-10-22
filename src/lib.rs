@@ -24,6 +24,12 @@ pub mod errors {
     }
 }
 
+#[cfg(feature = "use_f64")]
+pub type p_float = f64;
+
+#[cfg(not(feature = "use_f64"))]
+pub type p_float = f32;
+
 mod functions;
 mod model_reader;
 mod gbm;
