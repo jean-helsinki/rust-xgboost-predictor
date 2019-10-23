@@ -20,8 +20,6 @@ struct ModelParam {
     num_output_group: usize,
     /// size of leaf vector needed in tree
     size_leaf_vector: usize,
-    /// reserved parameters
-    reserved: [i32; 31],
 }
 
 impl ModelParam {
@@ -44,7 +42,6 @@ impl ModelParam {
             num_pbuffer,
             num_output_group,
             size_leaf_vector,
-            reserved,
         });
     }
 
@@ -101,21 +98,21 @@ impl GBTree {
         })
     }
 
-    fn pred<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f64 {
+    fn pred<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f32 {
         match &self.weight_drop {
             None => {self.pred_as_gbtree(feat, bst_group, root_index, ntree_limit)},
             Some(weight_drop) => {self.pred_as_dart(feat, &weight_drop, bst_group, root_index, ntree_limit)},
         }
     }
 
-    fn pred_as_dart<F: FVec>(&self, feat: &F, weight_drop: &Vec<f32>, bst_group: usize, root_index: usize, ntree_limit: usize) -> f64 {
+    fn pred_as_dart<F: FVec>(&self, feat: &F, weight_drop: &Vec<f32>, bst_group: usize, root_index: usize, ntree_limit: usize) -> f32 {
         let trees = self.group_trees[bst_group].clone();
         assert!(ntree_limit <= trees.len());
         let treeleft = if ntree_limit == 0 { trees.len() } else { ntree_limit };
-        (0..treeleft).map(|i| weight_drop[i] as f64 *trees[i].get_leaf_value(feat, root_index)).sum()
+        (0..treeleft).map(|i| weight_drop[i] *trees[i].get_leaf_value(feat, root_index)).sum()
     }
 
-    fn pred_as_gbtree<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f64 {
+    fn pred_as_gbtree<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f32 {
         let trees = self.group_trees[bst_group].clone();
         assert!(ntree_limit <= trees.len());
         let treeleft = if ntree_limit == 0 { trees.len() } else { ntree_limit };
@@ -129,12 +126,12 @@ impl GBTree {
 }
 
 impl<F: FVec> GradBooster<F> for GBTree {
-    fn predict(&self, feat: &F, ntree_limit: usize) -> Vec<f64> {
+    fn predict(&self, feat: &F, ntree_limit: usize) -> Vec<f32> {
         (0..self.mparam.num_output_group)
             .map(|gid| self.pred(feat, gid as usize, 0, ntree_limit)).collect()
     }
 
-    fn predict_single(&self, feat: &F, ntree_limit: usize) -> f64 {
+    fn predict_single(&self, feat: &F, ntree_limit: usize) -> f32 {
         if self.mparam.num_output_group != 1 {
             panic!("Can't invoke predict_single() because this model outputs multiple values");
         }

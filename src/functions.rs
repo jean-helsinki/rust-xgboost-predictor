@@ -12,51 +12,51 @@ pub enum FunctionType {
 
 /// interface of objective function
 pub struct ObjFunction {
-    pub vector: fn(&Vec<f64>) -> Vec<f64>,
-    pub scalar: fn(f64) -> f64,
+    pub vector: fn(&Vec<f32>) -> Vec<f32>,
+    pub scalar: fn(f32) -> f32,
 }
 
-fn sigmoid(x: f64) -> f64 {
-    1f64 / (1f64 + (-x).exp())
+fn sigmoid(x: f32) -> f32 {
+    1f32 / (1f32 + (-x).exp())
 }
 
-fn dump_vec(preds: &Vec<f64>) -> Vec<f64> {
+fn dump_vec(preds: &Vec<f32>) -> Vec<f32> {
     return preds.clone();
 }
 
-fn dump(pred: f64) -> f64 {
+fn dump(pred: f32) -> f32 {
     return pred;
 }
 
 /// Logistic regression.
-fn logistic_vec(preds: &Vec<f64>) -> Vec<f64> {
+fn logistic_vec(preds: &Vec<f32>) -> Vec<f32> {
     return preds.into_iter().map(|x| sigmoid(*x)).collect();
 }
 
 /// Multiclass classification.
-fn multiclass_vec(preds: &Vec<f64>) -> Vec<f64> {
+fn multiclass_vec(preds: &Vec<f32>) -> Vec<f32> {
     match preds.get(0) {
         Option::Some(init) => {
             let (max_index, _max) = preds.iter().enumerate()
                 .fold((0, init), |(i1, v1), (i2, v2)|
                     if v1 >= v2 { (i1, v1) } else { (i2, v2) });
-            return vec![max_index as f64; 1];
+            return vec![max_index as f32; 1];
         }
         // empty vector
         Option::None => preds.clone()
     }
 }
 
-fn unimplemented(_pred: f64) -> f64 {
+fn unimplemented(_pred: f32) -> f32 {
     std::unimplemented!();
 }
 
 ///  Multiclass classification (predicted probability).
-fn multiclass_pred_prob_vec(preds: &Vec<f64>) -> Vec<f64> {
+fn multiclass_pred_prob_vec(preds: &Vec<f32>) -> Vec<f32> {
     match preds.get(0) {
         Option::Some(init) => {
             let max = preds.iter().fold(*init, |a, b| b.max(a));
-            let sum: f64 = preds.iter().map(|x| (x - max).exp()).sum();
+            let sum: f32 = preds.iter().map(|x| (x - max).exp()).sum();
             return preds.iter().map(|x| (x - max).exp() / sum).collect();
         }
         // empty vector
@@ -79,6 +79,7 @@ pub fn get_classify_func_type(obj_name: Vec<u8>) -> Result<FunctionType> {
     return match obj_name.as_slice() {
         b"rank:pairwise" => Ok(FunctionType::RankPairwise),
         b"binary:logistic" => Ok(FunctionType::BinaryLogistic),
+        b"binary:logitraw" => Ok(FunctionType::BinaryLogitraw),
         b"multi:softmax" => Ok(FunctionType::MultiSoftmax),
         b"multi:softprob" => Ok(FunctionType::MultiSoftprob),
         b"reg:linear" => Ok(FunctionType::RegLinear),
@@ -94,6 +95,6 @@ mod tests {
     #[test]
     fn it_works() {
         let func = get_classify_function(BinaryLogistic);
-        (func.vector)(&vec![1.0f64, 4.6f64]);
+        (func.vector)(&vec![1.0f32, 4.6f32]);
     }
 }

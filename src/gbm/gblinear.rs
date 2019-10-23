@@ -10,8 +10,6 @@ struct ModelParam {
     /// this affects the behavior of number of output we have:
     /// suppose we have n instance and k group, output will be k*n
     num_output_group: usize,
-    /// reserved parameters
-    reserved: [i32; 32],
 }
 
 impl ModelParam {
@@ -25,7 +23,6 @@ impl ModelParam {
         Ok(ModelParam {
             num_feature,
             num_output_group,
-            reserved,
         })
     }
 }
@@ -58,13 +55,13 @@ impl GBLinear {
         self.weights[(fid*self.mparam.num_output_group) + gid]
     }
 
-    fn pred<F: FVec>(&self, feat: &F, gid: usize) -> f64 {
-        let mut psum = self.bias(gid) as f64;
+    fn pred<F: FVec>(&self, feat: &F, gid: usize) -> f32 {
+        let mut psum = self.bias(gid) as f32;
         for fid in 0..self.mparam.num_feature {
             match feat.fvalue(fid) {
                 None => {},
                 Some(feat_val) => {
-                    psum += feat_val * self.weight(fid, gid) as f64;
+                    psum += feat_val * self.weight(fid, gid);
                 },
             }
         }
@@ -73,12 +70,12 @@ impl GBLinear {
 }
 
 impl<F: FVec> GradBooster<F> for GBLinear {
-    fn predict(&self, feat: &F, ntree_limit: usize) -> Vec<f64> {
+    fn predict(&self, feat: &F, ntree_limit: usize) -> Vec<f32> {
         (0..self.mparam.num_output_group).map(
             |gid| self.pred(feat, gid)).collect()
     }
 
-    fn predict_single(&self, feat: &F, ntree_limit: usize) -> f64 {
+    fn predict_single(&self, feat: &F, ntree_limit: usize) -> f32 {
         if self.mparam.num_output_group != 1 {
             panic!("Can't invoke predict_single() because this model outputs multiple values");
         }

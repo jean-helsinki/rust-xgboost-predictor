@@ -18,8 +18,6 @@ struct Param {
     num_feature: i32,
     /// leaf vector size, used for vector tree used to store more than one dimensional information in tree
     size_leaf_vector: i32,
-    /// reserved part
-    reserved: [i32; 31],
 }
 
 impl Param {
@@ -37,7 +35,6 @@ impl Param {
             max_depth,
             num_feature,
             size_leaf_vector,
-            reserved,
         })
     }
 }
@@ -107,7 +104,7 @@ impl Node {
                 match feat.fvalue(split_index as usize) {
                     None => { return Some(default_next as usize) },
                     Some(fvalue) => {
-                        if fvalue < (split_cond as f64)
+                        if fvalue < split_cond
                         { Some(cleft as usize) } else { Some(cright as usize) }
                     }
                 }
@@ -168,10 +165,10 @@ impl RegTree {
         };
     }
 
-    pub fn get_leaf_value<F: FVec>(&self, feat: &F, root_id: usize) -> f64 {
+    pub fn get_leaf_value<F: FVec>(&self, feat: &F, root_id: usize) -> f32 {
         let leaf_node= self.nodes[self.get_leaf_index(feat, root_id)];
         return match leaf_node.leaf_or_split {
-            LeafOrSplit::LeafValue(leaf_value) => {leaf_value as f64},
+            LeafOrSplit::LeafValue(leaf_value) => leaf_value,
             LeafOrSplit::Split { .. } => {panic!("Broken tree - is not leaf node")},
         }
     }

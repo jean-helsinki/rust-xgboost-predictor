@@ -1,5 +1,5 @@
 use crate::model_reader::ModelReader;
-use crate::functions::{ObjFunction, FunctionType, get_classify_func_type, get_classify_function};
+use crate::functions::{ObjFunction, get_classify_func_type, get_classify_function};
 use crate::gbm::grad_booster::GradBooster;
 use crate::fvec::FVec;
 use crate::errors::*;
@@ -15,8 +15,6 @@ struct ModelParam {
     num_class: i32,
     /// whether the model itself is saved with pbuffer
     saved_with_pbuffer: i32,
-    /// reserved field
-    reserved: [i32; 30],
 }
 
 impl ModelParam {
@@ -29,7 +27,6 @@ impl ModelParam {
             num_feature,
             num_class,
             saved_with_pbuffer,
-            reserved,
         })
     }
 }
@@ -39,7 +36,7 @@ pub struct Predictor<F: FVec> {
     mparam: ModelParam,
     //SparkModelParam sparkModelParam;
     obj_func: ObjFunction,
-    gbm: Box<GradBooster<F>>,
+    gbm: Box<dyn GradBooster<F>>,
 }
 
 impl<F: FVec> Predictor<F> {
@@ -80,21 +77,21 @@ impl<F: FVec> Predictor<F> {
         });
     }
 
-    fn predict_raw(&self, feat: &F, ntree_limit: usize) -> Vec<f64> {
+    fn predict_raw(&self, feat: &F, ntree_limit: usize) -> Vec<f32> {
         let mut preds = self.gbm.predict(feat, ntree_limit);
         for i in 0..preds.len() {
-            preds[i] += self.mparam.base_score as f64;
+            preds[i] += self.mparam.base_score as f32;
         };
         preds
     }
 
-    fn predict_single_raw(&self, feat: &F, ntree_limit: usize) -> f64 {
-        return self.gbm.predict_single(feat, ntree_limit) + self.mparam.base_score as f64;
+    fn predict_single_raw(&self, feat: &F, ntree_limit: usize) -> f32 {
+        return self.gbm.predict_single(feat, ntree_limit) + self.mparam.base_score as f32;
     }
 
     /// Generates predictions for given feature vector
-    pub fn predict(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> Vec<f64>{
-        let mut preds = self.predict_raw(feat, ntree_limit);
+    pub fn predict(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> Vec<f32>{
+        let preds = self.predict_raw(feat, ntree_limit);
 
         return if output_margin {
             (self.obj_func.vector)(&preds)
@@ -104,7 +101,7 @@ impl<F: FVec> Predictor<F> {
     }
 
     /// Generates a prediction for given feature vector
-    pub fn predict_single(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> f64 {
+    pub fn predict_single(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> f32 {
         let pred = self.predict_single_raw(feat, ntree_limit);
         return if output_margin {
             (self.obj_func.scalar)(pred)
