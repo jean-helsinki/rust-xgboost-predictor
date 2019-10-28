@@ -1,5 +1,6 @@
 use byteorder::{BE, LE, ReadBytesExt};
 use crate::errors::*;
+use std::io::Read;
 
 
 pub trait ModelReader: ReadBytesExt {
@@ -59,12 +60,12 @@ pub trait ModelReader: ReadBytesExt {
     }
 
     fn skip(&mut self, num_bytes: usize) -> Result<()> {
-        let mut vec: Vec<u8> = Vec::with_capacity(num_bytes);
+        let mut vec: Vec<u8> = vec![0u8;num_bytes];
         return self.read_exact(vec.as_mut_slice()).chain_err(|| "failed to read u8 slice from model");
     }
 
     fn read_u8_vec(&mut self, size: usize) -> Result<Vec<u8>> {
-        let mut vec: Vec<u8> = Vec::with_capacity(size);
+        let mut vec: Vec<u8> = vec![0u8;size];
         self.read_exact(vec.as_mut_slice())?;
         return Ok(vec);
     }
@@ -75,11 +76,4 @@ pub trait ModelReader: ReadBytesExt {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let bytes = [0x0u8, 0x1, 0x2, 0x3];
-        assert_eq!(&bytes[..3], [0x0u8, 0x1, 0x2])
-    }
-}
+impl<T:Read> ModelReader for T {}

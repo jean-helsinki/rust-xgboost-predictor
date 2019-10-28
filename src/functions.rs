@@ -93,7 +93,7 @@ mod tests {
     use crate::functions::FunctionType::BinaryLogistic;
 
     #[test]
-    fn it_works() {
+    fn test_get_classify_function() {
         let func = get_classify_function(BinaryLogistic);
         (func.vector)(&vec![1.0f32, 4.6f32]);
     }

@@ -18,7 +18,7 @@ struct ModelParam {
 }
 
 impl ModelParam {
-    fn new<T: ModelReader>(base_score: f32, num_feature: usize, reader: &mut T) -> Result<ModelParam> {
+    fn read_from<T: ModelReader>(base_score: f32, num_feature: usize, reader: &mut T) -> Result<ModelParam> {
         let (num_class, saved_with_pbuffer) = (reader.read_i32_le()?, reader.read_i32_le()?);
         let mut reserved = [0i32; 30];
         reader.read_to_i32_buffer(&mut reserved)?;
@@ -55,11 +55,11 @@ impl<F: FVec> Predictor<F> {
             (LE::read_f32(&first4bytes), LE::read_i32(&next4bytes) as usize)
         };
 
-        return ModelParam::new(base_score, num_feature, reader);
+        return ModelParam::read_from(base_score, num_feature, reader);
     }
 
     /// Instantiates with the Xgboost model
-    pub fn new<T: ModelReader>(reader: &mut T) -> Result<Predictor<F>> {
+    pub fn read_from<T: ModelReader>(reader: &mut T) -> Result<Predictor<F>> {
         let mparam = Predictor::<F>::read_model_params(reader)?;
 
         let name_obj = reader.read_u8_vec_len()?;
