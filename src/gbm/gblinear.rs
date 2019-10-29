@@ -13,7 +13,7 @@ struct ModelParam {
 }
 
 impl ModelParam {
-    fn new<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
+    fn read_from<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
         let (num_feature, num_output_group) =
             (reader.read_i32_le()? as usize, reader.read_i32_le()? as usize);
         let mut reserved = [0i32;32];
@@ -33,8 +33,8 @@ pub struct GBLinear {
 }
 
 impl GBLinear {
-    pub fn new<T: ModelReader>(with_pbuffer: bool, reader: &mut T) -> Result<Self> {
-        let mparam = ModelParam::new(reader)?;
+    pub fn read_from<T: ModelReader>(with_pbuffer: bool, reader: &mut T) -> Result<Self> {
+        let mparam = ModelParam::read_from(reader)?;
         // read padding
         reader.read_i32_le()?;
         let weights = reader.read_float_vec(

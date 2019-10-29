@@ -70,9 +70,9 @@ impl GBTree {
         ).collect()
     }
 
-    pub fn new<T: ModelReader>(with_pbuffer: bool, reader: &mut T, is_dart: bool) -> Result<Self> {
+    pub fn read_from<T: ModelReader>(with_pbuffer: bool, reader: &mut T, is_dart: bool) -> Result<Self> {
         let mparam = ModelParam::new(reader)?;
-        let trees_result: Result<Vec<RegTree>> = (0..mparam.num_trees).map(|_| RegTree::new(reader)).collect();
+        let trees_result: Result<Vec<RegTree>> = (0..mparam.num_trees).map(|_| RegTree::read_from(reader)).collect();
         let trees= trees_result?;
 
         let tree_info = reader.read_int_vec(mparam.num_trees as usize)?;

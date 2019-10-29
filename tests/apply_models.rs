@@ -19,7 +19,9 @@ fn open_resource_file(rel_path: &str) -> io::Result<File> {
     File::open(get_resource(rel_path))
 }
 
-type DataItem = (usize, FVecMap<f32>);
+type TestMap = FVecMap<f32>;
+type DataItem = (usize, TestMap);
+type TestPredictor = Predictor<TestMap>;
 
 fn load_data(rel_path: &str) -> LinkedList<DataItem> {
     let mut file = open_resource_file(rel_path).unwrap();
@@ -29,7 +31,7 @@ fn load_data(rel_path: &str) -> LinkedList<DataItem> {
     for line in reader.lines() {
         let dataline = line.unwrap();
         let values: Vec<&str> = dataline.split(' ').collect();
-        let mut map = FVecMap::<f32>::new();
+        let mut map = TestMap::new();
         let val = values[0].parse::<usize>().unwrap();
         for s in values[1..].iter() {
             let pair: Vec<&str> = s.split(':').collect();
@@ -41,9 +43,25 @@ fn load_data(rel_path: &str) -> LinkedList<DataItem> {
     result
 }
 
+fn predict_and_log_loss(predictor: &TestPredictor, data: LinkedList<DataItem>) -> f32 {
+    let mut sum = 0f32;
+    for (actual, map) in data.iter() {
+        let predicted = predictor.predict(map, false, 0);
+        let sub_zero = 1e-15f32;
+        let pred_value = predicted[0].max(sub_zero).min(1f32 - sub_zero);
+
+    };
+    0f32
+}
+
+fn predict_leaf_index(predictor: &TestPredictor, data: LinkedList<DataItem>) {
+
+}
+
 #[test]
 fn test_predict() {
     let data = load_data("data/agaricus.txt.0.test");
     let mut model_file = open_resource_file("model/gbtree/v47/binary-logistic.model").unwrap();
-    let predictor: Predictor<FVecMap<f32>> = Predictor::read_from::<File>(&mut model_file).unwrap();
+    let predictor: TestPredictor = Predictor::read_from::<File>(&mut model_file).unwrap();
+    predict_and_log_loss(&predictor, data);
 }
