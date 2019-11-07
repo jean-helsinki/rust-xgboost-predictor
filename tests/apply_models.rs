@@ -1,47 +1,13 @@
+mod common;
+
 use std::path::PathBuf;
 use std::fs::File;
-
-use std::collections::{HashMap, LinkedList};
-use xgboost_predictor::fvec::FVecMap;
-use std::io::{BufReader, BufRead};
-use std::io;
+use std::io::BufReader;
 use xgboost_predictor::predictor::Predictor;
+use std::collections::LinkedList;
 
-
-fn get_resource(rel_path: &str) -> PathBuf {
-    let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    d.push("tests/resources");
-    d.push(rel_path);
-    d
-}
-
-fn open_resource_file(rel_path: &str) -> io::Result<File> {
-    File::open(get_resource(rel_path))
-}
-
-type TestMap = FVecMap<f32>;
-type DataItem = (usize, TestMap);
-type TestPredictor = Predictor<TestMap>;
-
-fn load_data(rel_path: &str) -> LinkedList<DataItem> {
-    let mut file = open_resource_file(rel_path).unwrap();
-    let reader = BufReader::new(file);
-    let mut result = LinkedList::<DataItem>::new();
-
-    for line in reader.lines() {
-        let dataline = line.unwrap();
-        let values: Vec<&str> = dataline.split(' ').collect();
-        let mut map = TestMap::new();
-        let val = values[0].parse::<usize>().unwrap();
-        for s in values[1..].iter() {
-            let pair: Vec<&str> = s.split(':').collect();
-            map.insert(pair[0].parse::<usize>().unwrap(),
-                       pair[1].parse::<f32>().unwrap());
-        }
-        result.push_back((val, map));
-    }
-    result
-}
+use crate::common::loaders::{open_resource_file, load_data, load_expectation};
+use crate::common::types::*;
 
 fn predict_and_log_loss(predictor: &TestPredictor, data: LinkedList<DataItem>) -> f32 {
     let mut sum = 0f32;
@@ -61,6 +27,7 @@ fn predict_leaf_index(predictor: &TestPredictor, data: LinkedList<DataItem>) {
 #[test]
 fn test_predict() {
     let data = load_data("data/agaricus.txt.0.test");
+    let expectation = load_expectation("expectation/gblinear/v40/binary-logistic.predict");
     let mut model_file = open_resource_file("model/gbtree/v47/binary-logistic.model").unwrap();
     let predictor: TestPredictor = Predictor::read_from::<File>(&mut model_file).unwrap();
     predict_and_log_loss(&predictor, data);
