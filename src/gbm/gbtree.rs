@@ -1,9 +1,10 @@
-use crate::gbm::regtree::RegTree;
-use crate::gbm::grad_booster::GradBooster;
-use crate::model_reader::ModelReader;
-use crate::fvec::FVec;
-use crate::errors::*;
+use std::cmp;
 
+use crate::errors::*;
+use crate::fvec::FVec;
+use crate::gbm::grad_booster::GradBooster;
+use crate::gbm::regtree::RegTree;
+use crate::model_reader::ModelReader;
 
 struct ModelParam {
     /// number of trees
@@ -24,14 +25,19 @@ struct ModelParam {
 
 impl ModelParam {
     fn new<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
-        let (num_trees, num_roots, num_feature) =
-            (reader.read_i32_le()?, reader.read_i32_le()?, reader.read_i32_le()?);
+        let (num_trees, num_roots, num_feature) = (
+            reader.read_i32_le()?,
+            reader.read_i32_le()?,
+            reader.read_i32_le()?,
+        );
         // read padding
         reader.read_i32_le()?;
         let num_pbuffer = reader.read_i64_le()? as usize;
-        let (num_output_group, size_leaf_vector) =
-            (reader.read_i32_le()? as usize, reader.read_i32_le()? as usize);
-        let mut reserved = [0i32;31];
+        let (num_output_group, size_leaf_vector) = (
+            reader.read_i32_le()? as usize,
+            reader.read_i32_le()? as usize,
+        );
+        let mut reserved = [0i32; 31];
         reader.read_to_i32_buffer(&mut reserved)?;
         // read padding
         reader.read_i32_le()?;
@@ -46,8 +52,7 @@ impl ModelParam {
     }
 
     pub fn pred_buffer_size(&self) -> usize {
-        return self.num_pbuffer * (self.num_output_group)
-            * (self.size_leaf_vector + 1);
+        return self.num_pbuffer * (self.num_output_group) * (self.size_leaf_vector + 1);
     }
 }
 
@@ -62,18 +67,31 @@ pub struct GBTree {
 }
 
 impl GBTree {
-    fn parse_group_trees(num_output_group: usize, tree_info: &Vec<i32>, trees: &Vec<RegTree>) -> Vec<Vec<RegTree>> {
-        (0..num_output_group).map(|i|
-            (0..tree_info.len())
-                .filter(|j| tree_info[*j] == i as i32)
-                .map(|j| trees[j].clone()).collect()
-        ).collect()
+    fn parse_group_trees(
+        num_output_group: usize,
+        tree_info: &Vec<i32>,
+        trees: &Vec<RegTree>,
+    ) -> Vec<Vec<RegTree>> {
+        (0..num_output_group)
+            .map(|i| {
+                (0..tree_info.len())
+                    .filter(|j| tree_info[*j] == i as i32)
+                    .map(|j| trees[j].clone())
+                    .collect()
+            })
+            .collect()
     }
 
-    pub fn read_from<T: ModelReader>(with_pbuffer: bool, reader: &mut T, is_dart: bool) -> Result<Self> {
+    pub fn read_from<T: ModelReader>(
+        with_pbuffer: bool,
+        reader: &mut T,
+        is_dart: bool,
+    ) -> Result<Self> {
         let mparam = ModelParam::new(reader)?;
-        let trees_result: Result<Vec<RegTree>> = (0..mparam.num_trees).map(|_| RegTree::read_from(reader)).collect();
-        let trees= trees_result?;
+        let trees_result: Result<Vec<RegTree>> = (0..mparam.num_trees)
+            .map(|_| RegTree::read_from(reader))
+            .collect();
+        let trees = trees_result?;
 
         let tree_info = reader.read_int_vec(mparam.num_trees as usize)?;
 
@@ -81,13 +99,16 @@ impl GBTree {
             reader.skip(8 * mparam.pred_buffer_size())?;
         }
 
-        let group_trees = GBTree::parse_group_trees(mparam.num_output_group as usize, &tree_info, &trees);
+        let group_trees =
+            GBTree::parse_group_trees(mparam.num_output_group as usize, &tree_info, &trees);
 
         let weight_drop = if is_dart {
             // if gbtree.mparam.num_trees != 0 {
             let size = reader.read_i64_le()? as usize;
             Some(reader.read_float_vec(size)?)
-        } else { None };
+        } else {
+            None
+        };
 
         Ok(GBTree {
             mparam,
@@ -98,37 +119,75 @@ impl GBTree {
         })
     }
 
-    fn pred<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f32 {
+    fn pred<F: FVec>(
+        &self,
+        feat: &F,
+        bst_group: usize,
+        root_index: usize,
+        ntree_limit: usize,
+    ) -> f32 {
         match &self.weight_drop {
-            None => {self.pred_as_gbtree(feat, bst_group, root_index, ntree_limit)},
-            Some(weight_drop) => {self.pred_as_dart(feat, &weight_drop, bst_group, root_index, ntree_limit)},
+            None => self.pred_as_gbtree(feat, bst_group, root_index, ntree_limit),
+            Some(weight_drop) => {
+                self.pred_as_dart(feat, &weight_drop, bst_group, root_index, ntree_limit)
+            }
         }
     }
 
-    fn pred_as_dart<F: FVec>(&self, feat: &F, weight_drop: &Vec<f32>, bst_group: usize, root_index: usize, ntree_limit: usize) -> f32 {
+    fn pred_as_dart<F: FVec>(
+        &self,
+        feat: &F,
+        weight_drop: &Vec<f32>,
+        bst_group: usize,
+        root_index: usize,
+        ntree_limit: usize,
+    ) -> f32 {
         let trees = self.group_trees[bst_group].clone();
-        assert!(ntree_limit <= trees.len());
-        let treeleft = if ntree_limit == 0 { trees.len() } else { ntree_limit };
-        (0..treeleft).map(|i| weight_drop[i] *trees[i].get_leaf_value(feat, root_index)).sum()
+        let treeleft = if ntree_limit == 0 {
+            trees.len()
+        } else {
+            cmp::min(ntree_limit, trees.len())
+        };
+        (0..treeleft)
+            .map(|i| weight_drop[i] * trees[i].get_leaf_value(feat, root_index))
+            .sum()
     }
 
-    fn pred_as_gbtree<F: FVec>(&self, feat: &F, bst_group: usize, root_index: usize, ntree_limit: usize) -> f32 {
+    fn pred_as_gbtree<F: FVec>(
+        &self,
+        feat: &F,
+        bst_group: usize,
+        root_index: usize,
+        ntree_limit: usize,
+    ) -> f32 {
         let trees = self.group_trees[bst_group].clone();
-        assert!(ntree_limit <= trees.len());
-        let treeleft = if ntree_limit == 0 { trees.len() } else { ntree_limit };
-        (0..treeleft).map(|i| trees[i].get_leaf_value(feat, root_index)).sum()
+        let treeleft = if ntree_limit == 0 {
+            trees.len()
+        } else {
+            cmp::min(ntree_limit, trees.len())
+        };
+        (0..treeleft)
+            .map(|i| trees[i].get_leaf_value(feat, root_index))
+            .sum()
     }
 
     fn pred_path<F: FVec>(&self, feat: &F, root_index: usize, ntree_limit: usize) -> Vec<usize> {
-        let treeleft = if ntree_limit == 0 {self.trees.len()} else {ntree_limit};
-        (0..treeleft).map(|i| self.trees[i].get_leaf_index(feat, root_index)).collect()
+        let treeleft = if ntree_limit == 0 {
+            self.trees.len()
+        } else {
+            ntree_limit
+        };
+        (0..treeleft)
+            .map(|i| self.trees[i].get_leaf_index(feat, root_index))
+            .collect()
     }
 }
 
 impl<F: FVec> GradBooster<F> for GBTree {
     fn predict(&self, feat: &F, ntree_limit: usize) -> Vec<f32> {
         (0..self.mparam.num_output_group)
-            .map(|gid| self.pred(feat, gid as usize, 0, ntree_limit)).collect()
+            .map(|gid| self.pred(feat, gid as usize, 0, ntree_limit))
+            .collect()
     }
 
     fn predict_single(&self, feat: &F, ntree_limit: usize) -> f32 {

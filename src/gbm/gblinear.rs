@@ -1,7 +1,7 @@
-use crate::model_reader::ModelReader;
-use crate::gbm::grad_booster::GradBooster;
-use crate::fvec::FVec;
 use crate::errors::*;
+use crate::fvec::FVec;
+use crate::gbm::grad_booster::GradBooster;
+use crate::model_reader::ModelReader;
 
 struct ModelParam {
     /// number of features
@@ -14,9 +14,11 @@ struct ModelParam {
 
 impl ModelParam {
     fn read_from<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
-        let (num_feature, num_output_group) =
-            (reader.read_i32_le()? as usize, reader.read_i32_le()? as usize);
-        let mut reserved = [0i32;32];
+        let (num_feature, num_output_group) = (
+            reader.read_i32_le()? as usize,
+            reader.read_i32_le()? as usize,
+        );
+        let mut reserved = [0i32; 32];
         reader.read_to_i32_buffer(&mut reserved)?;
         // read padding
         reader.read_i32_le()?;
@@ -37,14 +39,9 @@ impl GBLinear {
         let mparam = ModelParam::read_from(reader)?;
         // read padding
         reader.read_i32_le()?;
-        let weights = reader.read_float_vec(
-            (mparam.num_feature + 1) * mparam.num_output_group
-        )?;
+        let weights = reader.read_float_vec((mparam.num_feature + 1) * mparam.num_output_group)?;
 
-        Ok(GBLinear {
-            mparam,
-            weights,
-        })
+        Ok(GBLinear { mparam, weights })
     }
 
     fn bias(&self, gid: usize) -> f32 {
@@ -52,17 +49,17 @@ impl GBLinear {
     }
 
     fn weight(&self, fid: usize, gid: usize) -> f32 {
-        self.weights[(fid*self.mparam.num_output_group) + gid]
+        self.weights[(fid * self.mparam.num_output_group) + gid]
     }
 
     fn pred<F: FVec>(&self, feat: &F, gid: usize) -> f32 {
         let mut psum = self.bias(gid) as f32;
         for fid in 0..self.mparam.num_feature {
             match feat.fvalue(fid) {
-                None => {},
+                None => {}
                 Some(feat_val) => {
                     psum += feat_val * self.weight(fid, gid);
-                },
+                }
             }
         }
         psum
@@ -71,8 +68,9 @@ impl GBLinear {
 
 impl<F: FVec> GradBooster<F> for GBLinear {
     fn predict(&self, feat: &F, ntree_limit: usize) -> Vec<f32> {
-        (0..self.mparam.num_output_group).map(
-            |gid| self.pred(feat, gid)).collect()
+        (0..self.mparam.num_output_group)
+            .map(|gid| self.pred(feat, gid))
+            .collect()
     }
 
     fn predict_single(&self, feat: &F, ntree_limit: usize) -> f32 {

@@ -25,7 +25,7 @@ pub mod errors {
 }
 
 mod functions;
-pub mod model_reader;
-mod gbm;
 pub mod fvec;
+mod gbm;
+pub mod model_reader;
 pub mod predictor;

@@ -1,22 +1,27 @@
-use byteorder::{BE, LE, ReadBytesExt};
 use crate::errors::*;
+use byteorder::{ReadBytesExt, BE, LE};
 use std::io::Read;
-
 
 pub trait ModelReader: ReadBytesExt {
     #[inline]
     fn read_i32_le(&mut self) -> Result<i32> {
-        return self.read_i32::<LE>().chain_err(|| "failed to read i32 from model");
+        return self
+            .read_i32::<LE>()
+            .chain_err(|| "failed to read i32 from model");
     }
 
     #[inline]
     fn read_i64_le(&mut self) -> Result<i64> {
-        return self.read_i64::<LE>().chain_err(|| "failed to read i64 from model");
+        return self
+            .read_i64::<LE>()
+            .chain_err(|| "failed to read i64 from model");
     }
 
     #[inline]
     fn read_f32_le(&mut self) -> Result<f32> {
-        return self.read_f32::<LE>().chain_err(|| "failed to read f32 from model");
+        return self
+            .read_f32::<LE>()
+            .chain_err(|| "failed to read f32 from model");
     }
 
     #[inline]
@@ -28,8 +33,8 @@ pub trait ModelReader: ReadBytesExt {
     fn read_to_i32_buffer(&mut self, buffer: &mut [i32]) -> Result<()> {
         for b in buffer.iter_mut() {
             match self.read_i32_le() {
-                Ok(val) => {*b = val},
-                Err(e) => {return Err(e)},
+                Ok(val) => *b = val,
+                Err(e) => return Err(e),
             }
         }
         return Ok(());
@@ -38,8 +43,8 @@ pub trait ModelReader: ReadBytesExt {
     fn read_to_f32_buffer(&mut self, buffer: &mut [f32]) -> Result<()> {
         for b in buffer.iter_mut() {
             match self.read_f32_le() {
-                Ok(val) => {*b = val},
-                Err(e) => {return Err(e)},
+                Ok(val) => *b = val,
+                Err(e) => return Err(e),
             }
         }
         return Ok(());
@@ -60,12 +65,14 @@ pub trait ModelReader: ReadBytesExt {
     }
 
     fn skip(&mut self, num_bytes: usize) -> Result<()> {
-        let mut vec: Vec<u8> = vec![0u8;num_bytes];
-        return self.read_exact(vec.as_mut_slice()).chain_err(|| "failed to read u8 slice from model");
+        let mut vec: Vec<u8> = vec![0u8; num_bytes];
+        return self
+            .read_exact(vec.as_mut_slice())
+            .chain_err(|| "failed to read u8 slice from model");
     }
 
     fn read_u8_vec(&mut self, size: usize) -> Result<Vec<u8>> {
-        let mut vec: Vec<u8> = vec![0u8;size];
+        let mut vec: Vec<u8> = vec![0u8; size];
         self.read_exact(vec.as_mut_slice())?;
         return Ok(vec);
     }
@@ -76,4 +83,4 @@ pub trait ModelReader: ReadBytesExt {
     }
 }
 
-impl<T:Read> ModelReader for T {}
+impl<T: Read> ModelReader for T {}
