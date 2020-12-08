@@ -1,10 +1,9 @@
-use std::path::PathBuf;
-use std::fs::File;
-use std::io::{BufReader, BufRead, Result};
 use std::collections::LinkedList;
+use std::fs::File;
+use std::io::{BufRead, BufReader, Result};
+use std::path::PathBuf;
 
 use crate::common::types::*;
-
 
 pub fn get_resource(rel_path: &str) -> PathBuf {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -29,21 +28,27 @@ pub fn load_data(rel_path: &str) -> LinkedList<DataItem> {
         let val = values[0].parse::<usize>().unwrap();
         for s in values[1..].iter() {
             let pair: Vec<&str> = s.split(':').collect();
-            map.insert(pair[0].parse::<usize>().unwrap(),
-                       pair[1].parse::<f32>().unwrap());
+            map.insert(
+                pair[0].parse::<usize>().unwrap(),
+                pair[1].parse::<f32>().unwrap(),
+            );
         }
         result.push_back((val, map));
     }
     result
 }
 
-pub fn load_expectation(rel_path: &str) -> LinkedList<f32> {
+pub fn load_expectation(rel_path: &str) -> LinkedList<Vec<f32>> {
     let mut file = open_resource_file(rel_path).unwrap();
     let reader = BufReader::new(file);
-    let mut result = LinkedList::<f32>::new();
+    let mut result = LinkedList::<Vec<f32>>::new();
     for line in reader.lines() {
-        let dataline = line.unwrap();
-        result.push_back(dataline.parse::<f32>().unwrap());
-    };
+        let values: Vec<f32> = line
+            .unwrap()
+            .split(",")
+            .map(|s| s.parse::<f32>().unwrap())
+            .collect();
+        result.push_back(values);
+    }
     result
 }

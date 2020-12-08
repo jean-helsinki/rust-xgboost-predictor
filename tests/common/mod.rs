@@ -1,4 +1,5 @@
 pub mod loaders;
+pub mod tasks;
 
 pub mod types {
     use std::collections::{HashMap, LinkedList};
