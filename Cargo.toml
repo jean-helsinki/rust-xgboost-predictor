@@ -8,9 +8,14 @@ edition = "2018"
 [dependencies]
 byteorder = "1.2.2"
 error-chain = "0.12.1"
+pyo3 = "0.12.4"
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
+
+[lib]
+name = "xgboost_predictor"
+crate-type = ["cdylib"]
 
 [features]
 use_f64 = []

@@ -3,6 +3,7 @@ use crate::functions::{get_classify_func_type, get_classify_function, ObjFunctio
 use crate::fvec::FVec;
 use crate::gbm::grad_booster::GradBooster;
 use crate::model_reader::ModelReader;
+
 use byteorder::{ByteOrder, LE};
 
 struct ModelParam {
@@ -39,7 +40,7 @@ pub struct Predictor<F: FVec> {
     mparam: ModelParam,
     //SparkModelParam sparkModelParam;
     obj_func: ObjFunction,
-    gbm: Box<dyn GradBooster<F>>,
+    gbm: Box<dyn GradBooster<F> + Send>,
 }
 
 impl<F: FVec> Predictor<F> {

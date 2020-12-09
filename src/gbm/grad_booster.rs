@@ -18,7 +18,7 @@ pub fn load_grad_booster<F: FVec, T: ModelReader>(
     reader: &mut T,
     name_gbm: Vec<u8>,
     with_pbuffer: bool,
-) -> Result<Box<dyn GradBooster<F>>> {
+) -> Result<Box<dyn GradBooster<F> + Send>> {
     match name_gbm.as_slice() {
         b"gbtree" => Ok(Box::new(GBTree::read_from(with_pbuffer, reader, false)?)),
         b"gblinear" => Ok(Box::new(GBLinear::read_from(with_pbuffer, reader)?)),

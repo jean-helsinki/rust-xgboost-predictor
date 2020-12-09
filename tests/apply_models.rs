@@ -104,19 +104,13 @@ fn test_gbtree() {
         String::from("gbtree"),
         vec![String::from("v47/rank-pairwise")],
         String::from("mq2008.test"),
-        vec![
-            tasks::predict(),
-            tasks::predict_single(),
-        ],
+        vec![tasks::predict(), tasks::predict_single()],
     );
     run(
         String::from("gbtree"),
         vec![String::from("v47/sms-spam")],
         String::from("sms-spam.test"),
-        vec![
-            tasks::predict(),
-            tasks::predict_leaf(),
-        ],
+        vec![tasks::predict(), tasks::predict_leaf()],
     );
 }
 

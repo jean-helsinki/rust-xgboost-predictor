@@ -29,3 +29,48 @@ pub mod fvec;
 mod gbm;
 pub mod model_reader;
 pub mod predictor;
+mod wrapper;
+
+use pyo3::prelude::*;
+use pyo3::{create_exception, exceptions, wrap_pyfunction, PyErr};
+
+use std::{fs, io};
+
+#[pyfunction]
+fn load_model(py: Python, model_path: &str) -> PyResult<wrapper::PredictorWrapper> {
+    let model_file = fs::File::open(model_path);
+    let mut model_file = match model_file {
+        Ok(file) => file,
+        Err(error) => match error.kind() {
+            io::ErrorKind::NotFound => {
+                return Err(PyErr::new::<exceptions::PyFileNotFoundError, _>(format!(
+                    "File not found: {}",
+                    model_path
+                )))
+            }
+            _ => {
+                return Err(PyErr::new::<exceptions::PyOSError, _>(format!(
+                    "Unexpected: {}",
+                    error
+                )))
+            }
+        },
+    };
+    let predictor = predictor::Predictor::read_from::<fs::File>(&mut model_file);
+    match predictor {
+        Err(error) => Err(PyErr::new::<exceptions::PyOSError, _>(format!(
+            "Unexpected: {}",
+            error
+        ))),
+        Ok(_) => Ok(wrapper::PredictorWrapper {
+            predictor: predictor.unwrap(),
+        }),
+    }
+}
+
+#[pymodule]
+fn xgboost_predictor(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(load_model, m)?)?;
+
+    Ok(())
+}

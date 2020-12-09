@@ -54,3 +54,12 @@ impl<T: ToFloat> FVec for FVecArray<T> {
         }
     }
 }
+
+impl<T: ToFloat> FVecArray<T> {
+    pub fn new(values: Vec<T>) -> Self {
+        FVecArray {
+            values: values,
+            treats_zero_as_none: true,
+        }
+    }
+}
