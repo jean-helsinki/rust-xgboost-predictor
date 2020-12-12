@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::f32;
+use std::{f32};
 
 pub trait ToFloat {
     #[inline]

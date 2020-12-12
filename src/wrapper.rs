@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use numpy::PyReadonlyArray2;
 
 use crate::fvec::FVecArray;
 use crate::predictor::Predictor;
@@ -22,17 +23,19 @@ impl PredictorWrapper {
     #[args(ntree_limit = "0", margin = "false")]
     pub fn predict_batch(
         &self,
-        data: Vec<Vec<f32>>,
+        data: PyReadonlyArray2<f32>,
         ntree_limit: usize,
         margin: bool,
-    ) -> PyResult<Vec<Vec<f32>>> {
-        let mut tranformed = vec![];
-        for row in data.into_iter() {
-            tranformed.push(FVecArray::new(row))
+    ) {
+        let mut transformed = vec![];
+        let start = Instant::now();
+        let row_length = data.shape()[1];
+        for row in data.as_slice().unwrap().chunks(row_length) {
+            transformed.push(FVecArray::new(row.to_vec()));
         }
-        Ok(self
-            .predictor
-            .predict_many(&tranformed, true, ntree_limit))
+        let stop = start.elapsed();
+        println!("{:?}", stop);
+        let preds = self.predictor.predict_many(&transformed, margin, ntree_limit);
     }
 
     #[args(ntree_limit = "0", margin = "false")]

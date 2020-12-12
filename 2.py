@@ -14,20 +14,24 @@ if __name__ == "__main__":
             for i in line.split(" ")[1:]:
                 f, v = i.split(":")
                 row[int(f)] = int(v)
-            data.append(row)
+            data.append(tuple(row))
+    data = tuple(data)
 
     booster1 = xgboost.Booster({"nthread": 1})
     booster1.load_model('tests/resources/model/gblinear/v40/binary-logistic.model')
     data1 = xgboost.DMatrix(np.array(data))
-    
+
     start = datetime.datetime.now()
     a = booster1.predict(data1)
     print(datetime.datetime.now() - start)
     
     booster2 = xgboost_predictor.load_model('tests/resources/model/gblinear/v40/binary-logistic.model')
-    
+    data2 = np.array(data, dtype=np.float32)
+
     start = datetime.datetime.now()
-    b = booster2.predict_batch(data)
+    b = booster2.predict_batch(data2)
     print((datetime.datetime.now() - start))
 
+    print(a)
+    print(b)
     # print(a, b)
