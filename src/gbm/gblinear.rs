@@ -64,6 +64,24 @@ impl GBLinear {
         }
         psum
     }
+
+    fn pred_many<F: FVec>(&self, feats: &Vec<F>, gid: usize) -> Vec<f32> {
+        let bias = self.bias(gid) as f32;
+        let mut result = vec![];
+        for feat in feats.into_iter() {
+            let mut psum = bias;
+            for fid in 0..self.mparam.num_feature {
+                match &feat.fvalue(fid) {
+                    None => {}
+                    Some(feat_val) => {
+                        psum += feat_val * self.weight(fid, gid);
+                    }
+                }    
+            }
+            result.push(psum)
+        }
+        result
+    }
 }
 
 impl<F: FVec> GradBooster<F> for GBLinear {
@@ -82,5 +100,11 @@ impl<F: FVec> GradBooster<F> for GBLinear {
 
     fn predict_leaf(&self, feat: &F, ntree_limit: usize) -> Vec<usize> {
         unimplemented!("gblinear does not support predict leaf index")
+    }
+
+    fn predict_many(&self, feats: &Vec<F>, ntree_limit: usize) -> Vec<Vec<f32>> {
+        (0..self.mparam.num_output_group)
+            .map(|gid| self.pred_many(feats, gid))
+            .collect()
     }
 }

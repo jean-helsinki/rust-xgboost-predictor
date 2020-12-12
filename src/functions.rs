@@ -15,6 +15,7 @@ pub struct ObjFunction {
     pub scalar: fn(f32) -> f32,
 }
 
+#[inline]
 fn sigmoid(x: f32) -> f32 {
     1f32 / (1f32 + (-x).exp())
 }

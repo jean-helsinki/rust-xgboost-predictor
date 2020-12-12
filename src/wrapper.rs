@@ -3,6 +3,8 @@ use pyo3::prelude::*;
 use crate::fvec::FVecArray;
 use crate::predictor::Predictor;
 
+use std::time::{Duration, Instant};
+
 #[pyclass]
 pub struct PredictorWrapper {
     pub predictor: Predictor<FVecArray<f32>>,
@@ -15,6 +17,22 @@ impl PredictorWrapper {
         Ok(self
             .predictor
             .predict(&FVecArray::new(data), margin, ntree_limit))
+    }
+
+    #[args(ntree_limit = "0", margin = "false")]
+    pub fn predict_batch(
+        &self,
+        data: Vec<Vec<f32>>,
+        ntree_limit: usize,
+        margin: bool,
+    ) -> PyResult<Vec<Vec<f32>>> {
+        let mut tranformed = vec![];
+        for row in data.into_iter() {
+            tranformed.push(FVecArray::new(row))
+        }
+        Ok(self
+            .predictor
+            .predict_many(&tranformed, true, ntree_limit))
     }
 
     #[args(ntree_limit = "0", margin = "false")]

@@ -124,4 +124,17 @@ impl<F: FVec> Predictor<F> {
     pub fn predict_leaf(&self, feat: &F, ntree_limit: usize) -> Vec<usize> {
         self.gbm.predict_leaf(feat, ntree_limit)
     }
+
+    pub fn predict_many(
+        &self,
+        feats: &Vec<F>,
+        output_margin: bool,
+        ntree_limit: usize,
+    ) -> Vec<Vec<f32>> {
+        self.gbm
+            .predict_many(feats, ntree_limit)
+            .into_iter()
+            .map(|row| (self.obj_func.vector)(&row))
+            .collect()
+    }
 }

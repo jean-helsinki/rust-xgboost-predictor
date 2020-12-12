@@ -200,4 +200,8 @@ impl<F: FVec> GradBooster<F> for GBTree {
     fn predict_leaf(&self, feat: &F, ntree_limit: usize) -> Vec<usize> {
         self.pred_path(feat, 0, ntree_limit)
     }
+
+    fn predict_many(&self, feats: &Vec<F>, ntree_limit: usize) -> Vec<Vec<f32>> {
+        vec![vec![1 as f32]]
+    }
 }
