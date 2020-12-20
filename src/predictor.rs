@@ -1,8 +1,10 @@
 use crate::errors::*;
 use crate::functions::{get_classify_func_type, get_classify_function, ObjFunction};
-use crate::fvec::FVec;
+// use crate::fvec::FVec;
 use crate::gbm::grad_booster::GradBooster;
 use crate::model_reader::ModelReader;
+
+use ndarray::ArrayView2;
 
 use byteorder::{ByteOrder, LE};
 
@@ -36,14 +38,14 @@ impl ModelParam {
 }
 
 /// Predicts using the Xgboost model
-pub struct Predictor<F: FVec> {
+pub struct Predictor {
     mparam: ModelParam,
     //SparkModelParam sparkModelParam;
     obj_func: ObjFunction,
-    gbm: Box<dyn GradBooster<F> + Send>,
+    gbm: Box<dyn GradBooster + Send>,
 }
 
-impl<F: FVec> Predictor<F> {
+impl Predictor {
     fn read_model_params<T: ModelReader>(reader: &mut T) -> Result<ModelParam> {
         let mut first4bytes = [0u8; 4];
         let mut next4bytes = [0u8; 4];
@@ -66,8 +68,8 @@ impl<F: FVec> Predictor<F> {
     }
 
     /// Instantiates with the Xgboost model
-    pub fn read_from<T: ModelReader>(reader: &mut T) -> Result<Predictor<F>> {
-        let mparam = Predictor::<F>::read_model_params(reader)?;
+    pub fn read_from<T: ModelReader>(reader: &mut T) -> Result<Predictor> {
+        let mparam = Predictor::read_model_params(reader)?;
 
         let name_obj = reader.read_u8_vec_len()?;
         let name_gbm = reader.read_u8_vec_len()?;
@@ -87,52 +89,53 @@ impl<F: FVec> Predictor<F> {
         });
     }
 
-    fn predict_raw(&self, feat: &F, ntree_limit: usize) -> Vec<f32> {
-        let mut preds = self.gbm.predict(feat, ntree_limit);
-        for i in 0..preds.len() {
-            preds[i] += self.mparam.base_score as f32;
-        }
-        preds
-    }
+    // fn predict_raw(&self, feat: &F, ntree_limit: usize) -> Vec<f32> {
+    //     let mut preds = self.gbm.predict(feat, ntree_limit);
+    //     for i in 0..preds.len() {
+    //         preds[i] += self.mparam.base_score as f32;
+    //     }
+    //     preds
+    // }
 
-    fn predict_single_raw(&self, feat: &F, ntree_limit: usize) -> f32 {
-        self.gbm.predict_single(feat, ntree_limit) + self.mparam.base_score as f32
-    }
+    // fn predict_single_raw(&self, feat: &F, ntree_limit: usize) -> f32 {
+    //     self.gbm.predict_single(feat, ntree_limit) + self.mparam.base_score as f32
+    // }
 
-    /// Generates predictions for given feature vector
-    pub fn predict(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> Vec<f32> {
-        let preds = self.predict_raw(feat, ntree_limit);
+    // /// Generates predictions for given feature vector
+    // pub fn predict(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> Vec<f32> {
+    //     let preds = self.predict_raw(feat, ntree_limit);
 
-        return if !output_margin {
-            (self.obj_func.vector)(&preds)
-        } else {
-            preds
-        };
-    }
+    //     return if !output_margin {
+    //         (self.obj_func.vector)(&preds)
+    //     } else {
+    //         preds
+    //     };
+    // }
 
     /// Generates a prediction for given feature vector
-    pub fn predict_single(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> f32 {
-        let pred = self.predict_single_raw(feat, ntree_limit);
-        return if !output_margin {
-            (self.obj_func.scalar)(pred)
-        } else {
-            pred
-        };
-    }
+    // pub fn predict_single(&self, feat: &F, output_margin: bool, ntree_limit: usize) -> f32 {
+    //     let pred = self.predict_single_raw(feat, ntree_limit);
+    //     return if !output_margin {
+    //         (self.obj_func.scalar)(pred)
+    //     } else {
+    //         pred
+    //     };
+    // }
 
-    /// Predicts leaf index of each tree.
-    pub fn predict_leaf(&self, feat: &F, ntree_limit: usize) -> Vec<usize> {
-        self.gbm.predict_leaf(feat, ntree_limit)
-    }
+    // /// Predicts leaf index of each tree.
+    // pub fn predict_leaf(&self, feat: &F, ntree_limit: usize) -> Vec<usize> {
+    //     self.gbm.predict_leaf(feat, ntree_limit)
+    // }
 
     pub fn predict_many(
         &self,
-        feats: &Vec<F>,
+        feats: ArrayView2<f32>,
+        row_length: usize,
         output_margin: bool,
         ntree_limit: usize,
     ) -> Vec<Vec<f32>> {
         self.gbm
-            .predict_many(feats, ntree_limit)
+            .predict_many(feats, row_length, ntree_limit)
             .into_iter()
             .map(|row| (self.obj_func.vector)(&row))
             .collect()

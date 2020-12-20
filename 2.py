@@ -17,10 +17,15 @@ if __name__ == "__main__":
             data.append(tuple(row))
     data = tuple(data)
 
+    # c = np.array(data)
+    # # print(c.shape)
+    # # print(c.swapaxes(0, 1).shape)
+    # # print(c.shape)
+
+
     booster1 = xgboost.Booster({"nthread": 1})
     booster1.load_model('tests/resources/model/gblinear/v40/binary-logistic.model')
     data1 = xgboost.DMatrix(np.array(data))
-
     start = datetime.datetime.now()
     a = booster1.predict(data1)
     print(datetime.datetime.now() - start)
@@ -29,9 +34,29 @@ if __name__ == "__main__":
     data2 = np.array(data, dtype=np.float32)
 
     start = datetime.datetime.now()
-    b = booster2.predict_batch(data2)
+    b = booster2.predict_many(data2)
     print((datetime.datetime.now() - start))
 
     print(a)
-    print(b)
+    print(b[:10])
     # print(a, b)
+
+
+"""
+[1,2,3,4, 1,2,3,4, 1,2,3,4]
+
+(0 * 3) + 0 = 0
+(0 * 3) + 1 = 1
+(0 * 3) + 2 = 2
+(0 * 3) + 3 = 3
+
+(1 * 3) + 0 = 3 +
+(1 * 3) + 1 = 4
+(1 * 3) + 2 = 5
+(1 * 3) + 3 = 6
+
+(2 * 3) + 0 = 6 + 2
+(2 * 3) + 1 = 7
+(2 * 3) + 2 = 8
+(2 * 3) + 3 = 9
+"""
